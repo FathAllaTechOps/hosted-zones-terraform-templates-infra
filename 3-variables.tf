@@ -1,4 +1,4 @@
-variable "uk_hosted_zones" {
+variable "hosted_zones" {
   type = list(object({
     name        = string
     environment = string
