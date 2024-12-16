@@ -1,0 +1,109 @@
+name: Hostedzones
+run-name: ${{ inputs.Action }} Hosted Zones is triggered by ${{ github.actor }}
+on:
+  workflow_dispatch:
+    inputs:
+      Action:
+        type: choice
+        description: which action ?
+        options:
+          - plan
+          - apply
+          - destroy
+      target_modules:
+        description: 'Enter target modules'
+        required: false
+        default: ''
+
+permissions:
+      id-token: write   # This is required for requesting the JWT
+      contents: write    # This is required for actions/checkout
+
+jobs:
+  Terraform_Workflow:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - id: private-modules
+        uses: VFGroup-VBIT/vbitdc-opf-actions/private-modules@main
+        with:
+          org: VFGroup-VBIT
+          token: ${{ secrets.TOKEN }}
+
+      - name: Restor Terraform modules
+        uses: actions/cache@v4
+        with:
+          path: '**/.terraform'
+          key: ${{ runner.os }}-${{ hashFiles('**/terraform.lock') }}
+
+      - name: configure cyberhub dev aws credentials
+        id: dev_creds
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ vars.DEV_AWS_ACCOUNT_ID }}:role/Github-Runners-Access
+          role-session-name: GitHub_to_AWS_via_FederatedOIDC_Run_ID_${{ github.run_id }}
+          aws-region: ${{ vars.REGION }}
+          output-credentials: true
+
+      - name: configure cyberhub preprod aws credentials
+        id: preprod_creds
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ vars.PREPROD_AWS_ACCOUNT_ID }}:role/Github-Runners-Access
+          role-session-name: GitHub_to_AWS_via_FederatedOIDC_Run_ID_${{ github.run_id }}
+          aws-region: ${{ vars.REGION }}
+          output-credentials: true
+
+      - name: configure cyberhub prod aws credentials
+        id: prod_creds
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ vars.PROD_AWS_ACCOUNT_ID }}:role/Github-Runners-Access
+          role-session-name: GitHub_to_AWS_via_FederatedOIDC_Run_ID_${{ github.run_id }}
+          aws-region: ${{ vars.REGION }}
+          output-credentials: true
+      # Install AWS Cli
+      - uses: VFGroup-VBIT/vbitdc-opf-actions/aws/install-cli-action@main
+
+      - name: Create aws profile
+        run: |
+          mkdir ~/.aws
+          echo "[cyberhub-aws-dev]" >> ~/.aws/credentials
+          echo "aws_access_key_id        = ${{ steps.dev_creds.outputs.aws-access-key-id }}" >> ~/.aws/credentials
+          echo "aws_secret_access_key    = ${{ steps.dev_creds.outputs.aws-secret-access-key }}" >> ~/.aws/credentials
+          echo "aws_session_token        = ${{ steps.dev_creds.outputs.aws-session-token }}" >> ~/.aws/credentials
+          echo "[cyberhub-aws-pre-prod]" >> ~/.aws/credentials
+          echo "aws_access_key_id        = ${{ steps.preprod_creds.outputs.aws-access-key-id }}" >> ~/.aws/credentials
+          echo "aws_secret_access_key    = ${{ steps.preprod_creds.outputs.aws-secret-access-key }}" >> ~/.aws/credentials
+          echo "aws_session_token        = ${{ steps.preprod_creds.outputs.aws-session-token }}" >> ~/.aws/credentials
+          echo "[cyberhub-aws-prod]" >> ~/.aws/credentials
+          echo "aws_access_key_id        = ${{ steps.prod_creds.outputs.aws-access-key-id }}" >> ~/.aws/credentials
+          echo "aws_secret_access_key    = ${{ steps.prod_creds.outputs.aws-secret-access-key }}" >> ~/.aws/credentials
+          echo "aws_session_token        = ${{ steps.prod_creds.outputs.aws-session-token }}" >> ~/.aws/credentials
+
+
+      - name: Terraform Init
+        uses: VFGroup-VBIT/vbitdc-opf-actions/terraform/install-cli-and-init@main
+
+      - name: Terraform Plan
+        uses: VFGroup-VBIT/vbitdc-opf-actions/terraform/plan@main
+        if: ${{ inputs.Action == 'plan' }}
+        with:
+          target_modules: ${{inputs.target_modules}}
+        
+
+      - name: Run Terraform Apply
+        uses: VFGroup-VBIT/vbitdc-opf-actions/terraform/apply@main
+        if: ${{ inputs.Action == 'apply' }}
+        with:
+          target_modules: ${{inputs.target_modules}}
+        
+
+      - name: Run Terraform Destroy
+        uses: VFGroup-VBIT/vbitdc-opf-actions/terraform/destroy@main
+        if: ${{ inputs.Action == 'destroy' }}
+        with:
+          target_modules: ${{inputs.target_modules}}
+          

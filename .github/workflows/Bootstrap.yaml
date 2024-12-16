@@ -1,0 +1,94 @@
+name: Bootstrap Inrfastructure
+run-name: ${{ github.event.inputs.Action }} Bootstrap Infrastructure
+on:
+  workflow_dispatch:
+    inputs:
+        Action:
+          type: choice
+          description: which action ? 
+          options: 
+          - plan
+          - apply
+          - destroy
+        target_module:
+          description: 'Enter a target module'
+          required: false
+          default: ''
+        continue:
+          type: choice
+          description: "Continue applying Opentofu for the rest of the module in case there is target modules"
+          required: false
+          options:
+            - "true"
+            - "false"
+          default: "false"
+env:        
+  TARGET_MODULE: ${{ github.event.inputs.target_module }}
+jobs:
+  Terraform_Workflow:
+    runs-on: arc-scale-set
+    environment: "Default"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - uses: VFGroup-VBIT/vbitdc-opf-actions/aws/install-cli-action@main
+        with:
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/Github-Runners-Access
+          role-session-name: GitHub_to_AWS_via_FederatedOIDC
+          aws-region: "${aws_region}"
+
+      - name: Restor Terraform modules
+        uses: actions/cache@v4
+        with:
+          path: '**/.terraform'
+          key: ${{ runner.os }}-${{ hashFiles('**/terraform.lock') }}
+
+      - id: private-modules
+        uses: VFGroup-VBIT/vbitdc-opf-actions/private-modules@main
+        with:
+          org: VFGroup-VBIT
+          token: ${{ secrets.TOKEN }}
+
+      - name: OpenTofu Init
+        uses: VFGroup-VBIT/vbitdc-opf-actions/opentofu/install-cli-and-init@main
+        with:
+          opentofu_files_path: "./Bootstrap"
+
+      - name: Opentofu Plan
+        uses: VFGroup-VBIT/vbitdc-opf-actions/opentofu/plan@main
+        with:
+          target_modules: ${{ env.TARGET_MODULE }}
+          opentofu_files_path: "./Bootstrap"
+          tfvars_file_path: "opentofu.tfvars"
+          continue: ${{ inputs.continue }}
+        if: ${{ github.event.inputs.Action == 'plan' }}
+
+      - name: Opentofu Apply
+        uses: VFGroup-VBIT/vbitdc-opf-actions/opentofu/apply@main
+        with:
+          target_modules:  ${{ env.TARGET_MODULE }}
+          opentofu_files_path: "./Bootstrap"
+          tfvars_file_path: "opentofu.tfvars"
+          continue: ${{ inputs.continue }}
+        if: ${{ github.event.inputs.Action == 'apply' }}
+
+      - name: Opentofu Destroy
+        uses: VFGroup-VBIT/vbitdc-opf-actions/opentofu/destroy@main
+        with:
+          target_modules:  ${{ env.TARGET_MODULE }}
+          opentofu_files_path: "./Bootstrap"
+          continue: ${{ inputs.continue }} 
+        if: ${{ github.event.inputs.Action == 'destroy' }}
+
+      - name: Get current date
+        id: date
+        run: echo "date=$(date +'%Y-%m-%d-%H-%M')" >> $GITHUB_OUTPUT
+
+      - name: Commit & Push changes
+        uses: VFGroup-VBIT/vbitdc-opf-actions/commit-push@main
+        with:
+          github_token: ${{ secrets.TOKEN }}
+          branch: feat/add-tf-backend-file${{ steps.date.outputs.date }}
+          message: Add Terraform Backend File
+          force: true

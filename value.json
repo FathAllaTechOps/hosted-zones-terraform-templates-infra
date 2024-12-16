@@ -1,0 +1,14 @@
+{
+    "environment": {
+        "Lower": {
+            "aws-account-id": "123456789012"
+        },
+        "Higher": {
+            "aws-account-id": "987654321098"
+        }
+    },
+    "domain-name": "example.com",
+    "project_name": "my_project",
+    "managed_by": "admin",
+    "aws_region": "eu-west-1"
+}
