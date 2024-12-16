@@ -1,1 +1,1 @@
-# hosted-zones-terraform-templates-infra
+# hosted-zones-terraform-infra
