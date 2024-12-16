@@ -1,17 +1,17 @@
 hosted_zones = [
   {
     name        = "${domain_name}"
-    environment = "higher"
+    environment = "Higher"
     is_parent   = true
   },
   {
     name        = "dev.${domain_name}"
-    environment = "lower"
+    environment = "Lower"
     is_parent   = false
   },
   {
     name        = "sit.${domain_name}"
-    environment = "lower"
+    environment = "Lower"
     is_parent   = false
   }
 ]

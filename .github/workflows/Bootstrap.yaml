@@ -22,21 +22,25 @@ on:
             - "true"
             - "false"
           default: "false"
+
+permissions:
+      id-token: write   # This is required for requesting the JWT
+      contents: write    # This is required for actions/checkout
+      
 env:        
   TARGET_MODULE: ${{ github.event.inputs.target_module }}
 jobs:
   Terraform_Workflow:
     runs-on: arc-scale-set
-    environment: "Default"
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - uses: VFGroup-VBIT/vbitdc-opf-actions/aws/install-cli-action@main
         with:
-          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/Github-Runners-Access
+          role-to-assume: arn:aws:iam::${{ vars.Default_AWS_ACCOUNT_ID }}:role/Github-Runners-Access
           role-session-name: GitHub_to_AWS_via_FederatedOIDC
-          aws-region: "${aws_region}"
+          aws-region: "eu-west-1"
 
       - name: Restor Terraform modules
         uses: actions/cache@v4

@@ -1,5 +1,5 @@
-name: Hostedzones
-run-name: ${{ inputs.Action }} Hosted Zones is triggered by ${{ github.actor }}
+name: Hosted Zones
+run-name: ${{ github.event.inputs.Action }} Hosted Zones Infrastructure
 on:
   workflow_dispatch:
     inputs:
@@ -10,27 +10,47 @@ on:
           - plan
           - apply
           - destroy
-      target_modules:
+      target_module:
         description: 'Enter target modules'
         required: false
         default: ''
+      continue:
+        type: choice
+        description: "Continue applying Opentofu for the rest of the module in case there is target modules"
+        required: false
+        options:
+          - "true"
+          - "false"
+        default: "false"
 
 permissions:
       id-token: write   # This is required for requesting the JWT
       contents: write    # This is required for actions/checkout
 
+env:        
+  TARGET_MODULE: ${{ github.event.inputs.target_module }}
 jobs:
   Terraform_Workflow:
-    runs-on: self-hosted
+    runs-on: arc-scale-set
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - id: private-modules
-        uses: VFGroup-VBIT/vbitdc-opf-actions/private-modules@main
+      - name: configure Lower aws credentials
+        id: Lower_creds
+        uses: VFGroup-VBIT/vbitdc-opf-actions/aws/install-cli-action@main
         with:
-          org: VFGroup-VBIT
-          token: ${{ secrets.TOKEN }}
+          role-to-assume: arn:aws:iam::${{ vars.LOWER_AWS_ACCOUNT_ID }}:role/Github-Runners-Access
+          role-session-name: GitHub_to_AWS_via_FederatedOIDC_Run_ID_${{ github.run_id }}
+          aws-region: ${{ vars.REGION }}
+
+      - name: configure Higher aws credentials
+        id: Higher_creds
+        uses: VFGroup-VBIT/vbitdc-opf-actions/aws/install-cli-action@main
+        with:
+          role-to-assume: arn:aws:iam::${{ vars.HIGHER_AWS_ACCOUNT_ID }}:role/Github-Runners-Access
+          role-session-name: GitHub_to_AWS_via_FederatedOIDC_Run_ID_${{ github.run_id }}
+          aws-region: ${{ vars.REGION }}
 
       - name: Restor Terraform modules
         uses: actions/cache@v4
@@ -38,72 +58,51 @@ jobs:
           path: '**/.terraform'
           key: ${{ runner.os }}-${{ hashFiles('**/terraform.lock') }}
 
-      - name: configure cyberhub dev aws credentials
-        id: dev_creds
-        uses: aws-actions/configure-aws-credentials@v4
+      - id: private-modules
+        uses: VFGroup-VBIT/vbitdc-opf-actions/private-modules@main
         with:
-          role-to-assume: arn:aws:iam::${{ vars.DEV_AWS_ACCOUNT_ID }}:role/Github-Runners-Access
-          role-session-name: GitHub_to_AWS_via_FederatedOIDC_Run_ID_${{ github.run_id }}
-          aws-region: ${{ vars.REGION }}
-          output-credentials: true
-
-      - name: configure cyberhub preprod aws credentials
-        id: preprod_creds
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::${{ vars.PREPROD_AWS_ACCOUNT_ID }}:role/Github-Runners-Access
-          role-session-name: GitHub_to_AWS_via_FederatedOIDC_Run_ID_${{ github.run_id }}
-          aws-region: ${{ vars.REGION }}
-          output-credentials: true
-
-      - name: configure cyberhub prod aws credentials
-        id: prod_creds
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::${{ vars.PROD_AWS_ACCOUNT_ID }}:role/Github-Runners-Access
-          role-session-name: GitHub_to_AWS_via_FederatedOIDC_Run_ID_${{ github.run_id }}
-          aws-region: ${{ vars.REGION }}
-          output-credentials: true
-      # Install AWS Cli
-      - uses: VFGroup-VBIT/vbitdc-opf-actions/aws/install-cli-action@main
+          org: VFGroup-VBIT
+          token: ${{ secrets.TOKEN }}
 
       - name: Create aws profile
         run: |
           mkdir ~/.aws
-          echo "[cyberhub-aws-dev]" >> ~/.aws/credentials
-          echo "aws_access_key_id        = ${{ steps.dev_creds.outputs.aws-access-key-id }}" >> ~/.aws/credentials
-          echo "aws_secret_access_key    = ${{ steps.dev_creds.outputs.aws-secret-access-key }}" >> ~/.aws/credentials
-          echo "aws_session_token        = ${{ steps.dev_creds.outputs.aws-session-token }}" >> ~/.aws/credentials
-          echo "[cyberhub-aws-pre-prod]" >> ~/.aws/credentials
-          echo "aws_access_key_id        = ${{ steps.preprod_creds.outputs.aws-access-key-id }}" >> ~/.aws/credentials
-          echo "aws_secret_access_key    = ${{ steps.preprod_creds.outputs.aws-secret-access-key }}" >> ~/.aws/credentials
-          echo "aws_session_token        = ${{ steps.preprod_creds.outputs.aws-session-token }}" >> ~/.aws/credentials
-          echo "[cyberhub-aws-prod]" >> ~/.aws/credentials
-          echo "aws_access_key_id        = ${{ steps.prod_creds.outputs.aws-access-key-id }}" >> ~/.aws/credentials
-          echo "aws_secret_access_key    = ${{ steps.prod_creds.outputs.aws-secret-access-key }}" >> ~/.aws/credentials
-          echo "aws_session_token        = ${{ steps.prod_creds.outputs.aws-session-token }}" >> ~/.aws/credentials
+          echo "[Lower]" > ~/.aws/credentials
+          echo "aws_access_key_id        = ${{ steps.Lower_creds.outputs.aws-access-key-id }}" >> ~/.aws/credentials
+          echo "aws_secret_access_key    = ${{ steps.Lower_creds.outputs.aws-secret-access-key }}" >> ~/.aws/credentials
+          echo "aws_session_token        = ${{ steps.Lower_creds.outputs.aws-session-token }}" >> ~/.aws/credentials
+          echo "[Higher]" >> ~/.aws/credentials
+          echo "aws_access_key_id        = ${{ steps.Higher_creds.outputs.aws-access-key-id }}" >> ~/.aws/credentials
+          echo "aws_secret_access_key    = ${{ steps.Higher_creds.outputs.aws-secret-access-key }}" >> ~/.aws/credentials
+          echo "aws_session_token        = ${{ steps.Higher_creds.outputs.aws-session-token }}" >> ~/.aws/credentials
 
 
-      - name: Terraform Init
-        uses: VFGroup-VBIT/vbitdc-opf-actions/terraform/install-cli-and-init@main
+      - name: OpenTofu Init
+        uses: VFGroup-VBIT/vbitdc-opf-actions/opentofu/install-cli-and-init@main
 
-      - name: Terraform Plan
-        uses: VFGroup-VBIT/vbitdc-opf-actions/terraform/plan@main
-        if: ${{ inputs.Action == 'plan' }}
+      - name: Opentofu Plan
+        uses: VFGroup-VBIT/vbitdc-opf-actions/opentofu/plan@main
         with:
-          target_modules: ${{inputs.target_modules}}
+          target_modules: ${{ env.target_module }}
+          tfvars_file_path: "opentofu.tfvars"
+          continue: ${{ github.event.inputs.continue }}
+        if: ${{ github.event.inputs.Action == 'plan' }}
         
 
-      - name: Run Terraform Apply
-        uses: VFGroup-VBIT/vbitdc-opf-actions/terraform/apply@main
-        if: ${{ inputs.Action == 'apply' }}
+      - name: Opentofu Apply
+        uses: VFGroup-VBIT/vbitdc-opf-actions/opentofu/apply@main
         with:
-          target_modules: ${{inputs.target_modules}}
+          target_modules:  ${{ env.TARGET_MODULE }}
+          tfvars_file_path: "opentofu.tfvars"
+          continue: ${{ inputs.continue }}
+        if: ${{ github.event.inputs.Action == 'apply' }}
         
 
-      - name: Run Terraform Destroy
-        uses: VFGroup-VBIT/vbitdc-opf-actions/terraform/destroy@main
-        if: ${{ inputs.Action == 'destroy' }}
+      - name: Opentofu Destroy
+        uses: VFGroup-VBIT/vbitdc-opf-actions/opentofu/destroy@main
         with:
-          target_modules: ${{inputs.target_modules}}
+          target_modules:  ${{ env.TARGET_MODULE }}
+          continue: ${{ inputs.continue }} 
+        if: ${{ github.event.inputs.Action == 'destroy' }}
+
           
