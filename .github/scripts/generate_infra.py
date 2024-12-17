@@ -21,6 +21,39 @@ def replace_placeholders(file_path, values):
     with open(file_path, 'w') as f:
         f.write(content)
 
+def remove_higher_references(file_path):
+    with open(file_path, 'r') as f:
+        content = f.read()
+
+    # Remove higher references
+    content = content.replace('higher_profile = "Higher"\n', '')
+    content = content.replace('higher_tags    = var.higher_tags\n', '')
+    content = content.replace('variable "higher_tags" {\n  type = map(any)\n}\n', '')
+    content = content.replace('higher_tags = {\n  Project         = "my_project"\n  Environment     = "Prod"\n  ManagedBy       = "admin"\n  Confidentiality = "C2"\n  TaggingVersion  = "V2.4"\n  SecurityZone    = "A"\n}\n', '')
+
+    # Write back the updated content
+    with open(file_path, 'w') as f:
+        f.write(content)
+
+def remove_higher_tags_from_tfvars(file_path):
+    with open(file_path, 'r') as f:
+        content = f.read()
+
+    # Remove higher_tags block
+    higher_tags_block = '''higher_tags = {
+  Project         = "my_project"
+  Environment     = "Prod"
+  ManagedBy       = "admin"
+  Confidentiality = "C2"
+  TaggingVersion  = "V2.4"
+  SecurityZone    = "A"
+}'''
+    content = content.replace(higher_tags_block, '')
+
+    # Write back the updated content
+    with open(file_path, 'w') as f:
+        f.write(content)
+
 def create_infra_dir(base_dir, working_dir, values):
     infra_dir = os.path.join(base_dir, 'infrastructure')
     os.makedirs(infra_dir, exist_ok=True)
@@ -57,10 +90,6 @@ def create_infra_dir(base_dir, working_dir, values):
         hosted_zones_str = ",\n".join([f'  {{\n    name        = "{zone["name"]}"\n    environment = "{zone["environment"]}"\n    is_parent   = {str(zone["is_parent"]).lower()}\n  }}' for zone in hosted_zones])
         tfvars_content = tfvars_content.replace("hosted_zones = [\n  {\n    name        = \"${domain_name}\"\n    environment = \"Higher\"\n    is_parent   = true\n  },\n  {\n    name        = \"dev.${domain_name}\"\n    environment = \"Lower\"\n    is_parent   = false\n  }\n]", f"hosted_zones = [\n{hosted_zones_str}\n]")
 
-        if "Higher" not in values['environment']:
-            tfvars_content = tfvars_content.replace("higher_tags = var.higher_tags\n", "")
-            tfvars_content = tfvars_content.replace("higher_tags    = var.higher_tags\n", "")
-
         with open(dest_file, 'w') as f:
             f.write(tfvars_content)
 
@@ -70,30 +99,11 @@ def create_infra_dir(base_dir, working_dir, values):
             file_path = os.path.join(root, file)
             replace_placeholders(file_path, values)
 
-    # Update 2-main.tf file
-    main_tf_path = os.path.join(infra_dir, '2-main.tf')
-    if os.path.exists(main_tf_path):
-        with open(main_tf_path, 'r') as f:
-            main_tf_content = f.read()
-
-        if "Higher" not in values['environment']:
-            main_tf_content = main_tf_content.replace('  higher_profile = "Higher"\n', '')
-            main_tf_content = main_tf_content.replace('  higher_tags    = var.higher_tags\n', '')
-
-        with open(main_tf_path, 'w') as f:
-            f.write(main_tf_content)
-
-    # Update 3-variables.tf file
-    variables_tf_path = os.path.join(infra_dir, '3-variables.tf')
-    if os.path.exists(variables_tf_path):
-        with open(variables_tf_path, 'r') as f:
-            variables_tf_content = f.read()
-
-        if "Higher" not in values['environment']:
-            variables_tf_content = variables_tf_content.replace('variable "higher_tags" {\n  description = "Tags for higher environment"\n  type        = map(string)\n}\n\n', '')
-
-        with open(variables_tf_path, 'w') as f:
-            f.write(variables_tf_content)
+    # Remove higher references if "Higher" is not in the environment
+    if "Higher" not in values['environment']:
+        remove_higher_references(os.path.join(infra_dir, '2-main.tf'))
+        remove_higher_references(os.path.join(infra_dir, '3-variables.tf'))
+        remove_higher_tags_from_tfvars(os.path.join(infra_dir, 'opentofu.tfvars'))
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
