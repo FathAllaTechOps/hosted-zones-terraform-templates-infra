@@ -9,7 +9,7 @@
             "domain-names": ["stage.example.com", "example.com"]
         }
     },
-    "project_name": "my_project",
+    "project_name": "my_project-2",
     "managed_by": "admin",
     "aws_region": "eu-west-1"
 }
