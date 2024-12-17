@@ -15,6 +15,9 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
+    - name: Login to GitHub
+      run: echo "${{ secrets.TOKEN }}" | gh auth login -h github.com -p https --with-token
+      
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
