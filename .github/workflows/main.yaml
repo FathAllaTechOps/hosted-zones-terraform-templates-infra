@@ -1,5 +1,5 @@
 name:  Hosted Zones Generation
-run-name:  Hosted Zones 
+run-name:  Hosted Zones Generation
 on:
   workflow_dispatch:
     inputs:
