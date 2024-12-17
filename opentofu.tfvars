@@ -8,11 +8,6 @@ hosted_zones = [
     name        = "dev.${domain_name}"
     environment = "Lower"
     is_parent   = false
-  },
-  {
-    name        = "sit.${domain_name}"
-    environment = "Lower"
-    is_parent   = false
   }
 ]
 

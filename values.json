@@ -3,10 +3,6 @@
         "Lower": {
             "aws-account-id": "123456789012",
             "domain-names": ["dev.example.com", "sit.example.com","uat.example.com"]
-        },
-        "Higher": {
-            "aws-account-id": "987654321098",
-            "domain-names": ["stage.example.com", "example.com"]
         }
     },
     "project_name": "my_project",
