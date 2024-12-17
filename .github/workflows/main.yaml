@@ -32,7 +32,7 @@ jobs:
         echo '${{ inputs.project_details }}' > values.json
 
     - name: cat values.json
-      run: cat values.json
+      run: ls
 
     - name: Run generate_infra.py
       run: python3 .github/scripts/generate_infra.py values.json .
