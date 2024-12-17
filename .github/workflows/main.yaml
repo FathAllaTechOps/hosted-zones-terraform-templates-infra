@@ -94,6 +94,8 @@ jobs:
     - name: Commit and push changes
       run: |
         cd ${{ steps.extract_project_name.outputs.project_name }}-hosted-zone-infra
+        git config --global user.email "$GITHUB_ACTOR@github.com"
+        git config --global user.name "$GITHUB_ACTOR"
         git add .
         git commit -m "Add infrastructure files"
         git push origin development
