@@ -1,4 +1,4 @@
-name: Bootstrap Inrfastructure
+name: Bootstrap Infrastructure
 run-name: Bootstrap Infrastructure
 on:
   workflow_dispatch:
@@ -37,9 +37,37 @@ jobs:
     - name: Run generate_infra.py
       run: python3 .github/scripts/generate_infra.py values.json .
 
-    - name: Upload infrastructure directory
-      uses: actions/upload-artifact@v4
+    - name: Extract project_name from values.json
+      id: extract_project_name
+      run: echo "project_name=$(jq -r .project_name values.json)" >> $GITHUB_OUTPUT
+
+    - name: Create Repository from template
+      run: |
+        gh repo create ${{ steps.extract_project_name.outputs.project_name }}-hosted-zone-infra --public --template ${{ github.repository }}
+
+    - name: Checkout repository
+      uses: actions/checkout@v4
       with:
-        name: infrastructure
-        path: infrastructure/
-        retention-days: 1
+        repository: FathAllaTechOps/${{ steps.extract_project_name.outputs.project_name }}-hosted-zone-infra
+        token: ${{ secrets.TOKEN }}
+        path: ${{ steps.extract_project_name.outputs.project_name }}-hosted-zone-infra
+
+    - name: Copy infrastructure directory in the development branch
+      run: |
+        echo "##########" 
+        cd ${{ steps.extract_project_name.outputs.project_name }}-hosted-zone-infra
+        git checkout -b development
+        cp -r ../infrastructure/* .
+        echo "##########"
+        git config --global user.email "$GITHUB_ACTOR@github.com"
+        git config --global user.name "$GITHUB_ACTOR"
+        git add .
+        git commit -m "Initiate the repository structure :tada: "
+        git push --set-upstream origin development
+
+    # - name: Upload infrastructure directory
+    #   uses: actions/upload-artifact@v4
+    #   with:
+    #     name: infrastructure
+    #     path: infrastructure/
+    #     retention-days: 1
