@@ -17,7 +17,7 @@ jobs:
 
     - name: Login to GitHub
       run: echo "${{ secrets.TOKEN }}" | gh auth login -h github.com -p https --with-token
-      
+
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
@@ -35,7 +35,7 @@ jobs:
       run: cat values.json
 
     - name: Run generate_infra.py
-      run: python3 .github/scripts/generate_infra.py 
+      run: python3 .github/scripts/generate_infra.py values.json .
 
     - name: Upload infrastructure directory
       uses: actions/upload-artifact@v4
