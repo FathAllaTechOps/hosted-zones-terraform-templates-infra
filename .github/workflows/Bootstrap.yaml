@@ -65,7 +65,7 @@ jobs:
           target_modules: ${{ env.TARGET_MODULE }}
           opentofu_files_path: "./Bootstrap"
           tfvars_file_path: "opentofu.tfvars"
-          continue: ${{ inputs.continue }}
+          continue: ${{ github.event.inputs.continue }}
         if: ${{ github.event.inputs.Action == 'plan' }}
 
       - name: Opentofu Apply
@@ -74,7 +74,7 @@ jobs:
           target_modules:  ${{ env.TARGET_MODULE }}
           opentofu_files_path: "./Bootstrap"
           tfvars_file_path: "opentofu.tfvars"
-          continue: ${{ inputs.continue }}
+          continue: ${{ github.event.inputs.continue }}
         if: ${{ github.event.inputs.Action == 'apply' }}
 
       - name: Opentofu Destroy
@@ -82,7 +82,7 @@ jobs:
         with:
           target_modules:  ${{ env.TARGET_MODULE }}
           opentofu_files_path: "./Bootstrap"
-          continue: ${{ inputs.continue }} 
+          continue: ${{ github.event.inputs.continue }} 
         if: ${{ github.event.inputs.Action == 'destroy' }}
 
       - name: Get current date
