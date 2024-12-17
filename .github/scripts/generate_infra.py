@@ -59,8 +59,8 @@ def create_infra_dir(base_dir, working_dir, values):
     os.makedirs(infra_dir, exist_ok=True)
 
     # Copy bootstrap directory
-    bootstrap_dir = os.path.join(working_dir, 'bootstrap')
-    shutil.copytree(bootstrap_dir, os.path.join(infra_dir, 'bootstrap'), dirs_exist_ok=True)
+    bootstrap_dir = os.path.join(working_dir, 'Bootstrap')
+    shutil.copytree(bootstrap_dir, os.path.join(infra_dir, 'Bootstrap'), dirs_exist_ok=True)
 
     # Discover and copy .tf and .tfvars files
     tf_files = glob.glob(os.path.join(working_dir, '*.tf'))
