@@ -58,6 +58,18 @@ jobs:
       run: |
         gh variable set Default_AWS_ACCOUNT_ID --body "${{ steps.extract_aws_account_id.outputs.aws_account_id }}" --repo FathAllaTechOps/${{ steps.extract_project_name.outputs.project_name }}-hosted-zone-infra
 
+    - name: Check and set LOWER_AWS_ACCOUNT_ID
+      if: ${{ fromJson(inputs.project_details).environment.Lower }}
+      run: |
+        lower_aws_account_id=$(jq -r '.environment.Lower["aws-account-id"]' values.json)
+        gh variable set LOWER_AWS_ACCOUNT_ID --body "$lower_aws_account_id" --repo FathAllaTechOps/${{ steps.extract_project_name.outputs.project_name }}-hosted-zone-infra
+
+    - name: Check and set HIGHER_AWS_ACCOUNT_ID
+      if: ${{ fromJson(inputs.project_details).environment.Higher }}
+      run: |
+        higher_aws_account_id=$(jq -r '.environment.Higher["aws-account-id"]' values.json)
+        gh variable set HIGHER_AWS_ACCOUNT_ID --body "$higher_aws_account_id" --repo FathAllaTechOps/${{ steps.extract_project_name.outputs.project_name }}-hosted-zone-infra
+
     - name: Create repository secret
       run: |
         gh secret set TOKEN --body "${{ secrets.TOKEN }}" --repo FathAllaTechOps/${{ steps.extract_project_name.outputs.project_name }}-hosted-zone-infra
@@ -76,15 +88,12 @@ jobs:
         git checkout -b development
         cp -r ../infrastructure/* .
         echo "##########"
-        git config --global user.email "$GITHUB_ACTOR@github.com"
-        git config --global user.name "$GITHUB_ACTOR"
-        git add .
-        git commit -m "Initiate the repository structure :tada: "
-        git push --set-upstream origin development
+        python3 .github/scripts/check_environment.py .github/workflows/main.yaml ../values.json 
 
-    # - name: Upload infrastructure directory
-    #   uses: actions/upload-artifact@v4
-    #   with:
-    #     name: infrastructure
-    #     path: infrastructure/
-    #     retention-days: 1
+
+    - name: Commit and push changes
+      run: |
+        cd ${{ steps.extract_project_name.outputs.project_name }}-hosted-zone-infra
+        git add .
+        git commit -m "Add infrastructure files"
+        git push origin development
