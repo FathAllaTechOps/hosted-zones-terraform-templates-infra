@@ -31,13 +31,8 @@ jobs:
     - name: cat values.json
       run: cat values.json
 
-    - name: Run replace_vars.py
-      run: |
-        python replace_vars.py . values.json
-
     - name: Run generate_infra.py
-      run: |
-        python generate_infra.py 
+      run: python3 .github/scripts/generate_infra.py 
 
     - name: Upload infrastructure directory
       uses: actions/upload-artifact@v4
