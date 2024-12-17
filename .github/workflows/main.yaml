@@ -1,5 +1,5 @@
-name: Bootstrap Infrastructure
-run-name: Bootstrap Infrastructure
+name:  Hosted Zones Generation
+run-name:  Hosted Zones 
 on:
   workflow_dispatch:
     inputs:
