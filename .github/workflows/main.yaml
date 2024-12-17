@@ -41,12 +41,27 @@ jobs:
       id: extract_project_name
       run: echo "project_name=$(jq -r .project_name values.json)" >> $GITHUB_OUTPUT
 
+    - name: Extract AWS account ID
+      id: extract_aws_account_id
+      run: |
+        aws_account_id=$(jq -r '.environment.Higher.aws-account-id // .environment.Lower.aws-account-id' values.json)
+        echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT
+
     - name: Create Repository from template
       run: |
         gh repo create ${{ steps.extract_project_name.outputs.project_name }}-hosted-zone-infra --public --template ${{ github.repository }}
 
     - name: Sleep for 10 seconds
       run: sleep 10
+      
+    - name: Create repository variable
+      run: |
+        gh variable set Default_AWS_ACCOUNT_ID --body "${{ steps.extract_aws_account_id.outputs.aws_account_id }}" --repo FathAllaTechOps/${{ steps.extract_project_name.outputs.project_name }}-hosted-zone-infra
+
+    - name: Create repository secret
+      run: |
+        gh secret set TOKEN --body "${{ secrets.TOKEN }}" --repo FathAllaTechOps/${{ steps.extract_project_name.outputs.project_name }}-hosted-zone-infra
+        
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
