@@ -45,6 +45,8 @@ jobs:
       run: |
         gh repo create ${{ steps.extract_project_name.outputs.project_name }}-hosted-zone-infra --public --template ${{ github.repository }}
 
+    - name: Sleep for 10 seconds
+      run: sleep 10
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
