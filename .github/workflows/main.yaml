@@ -54,9 +54,14 @@ jobs:
     - name: Sleep for 10 seconds
       run: sleep 10
       
-    - name: Create repository variable
+    - name: Create repository variable Default_AWS_ACCOUNT_ID
       run: |
         gh variable set Default_AWS_ACCOUNT_ID --body "${{ steps.extract_aws_account_id.outputs.aws_account_id }}" --repo FathAllaTechOps/${{ steps.extract_project_name.outputs.project_name }}-hosted-zone-infra
+
+    - name: Create repository variable REGION
+      run: |
+        region=$(jq -r '.aws_region' values.json)
+        gh variable set REGION --body "$region" --repo FathAllaTechOps/${{ steps.extract_project_name.outputs.project_name }}-hosted-zone-infra
 
     - name: Check and set LOWER_AWS_ACCOUNT_ID
       if: ${{ fromJson(inputs.project_details).environment.Lower }}
