@@ -44,7 +44,7 @@ jobs:
     - name: Extract AWS account ID
       id: extract_aws_account_id
       run: |
-        aws_account_id=$(jq -r '.environment.Higher.aws-account-id // .environment.Lower.aws-account-id' values.json)
+        aws_account_id=$(jq -r '.environment.Higher["aws-account-id"] // .environment.Lower["aws-account-id"]' values.json)
         echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT
 
     - name: Create Repository from template
