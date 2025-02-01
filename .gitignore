@@ -39,3 +39,4 @@ terraform.rc
 # Custom 
 !opentofu.tfvars
 **aws**
+values2.json
